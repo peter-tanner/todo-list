@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useReducer } from "react";
+import { dbWriteTask } from "./firebase";
 
 export function TaskList(props) {
     const { tasks } = props;
@@ -23,8 +24,16 @@ export function TaskList(props) {
 }
 
 export function Task(props) {
-    const { taskId, name, description, date, deleteTask } = props;
-    const [done, setDone] = useState(false);
+    const { task: task_, deleteTask } = props;
+
+    const reducer = (state, event) => ({ ...state, [event.name]: event.value });
+    const [task, setTask] = useReducer(reducer, task_);
+
+    const setDone = (done) => {
+        setTask({ name: "done", value: done });
+        task.done = done; // Need to update variable as well
+        dbWriteTask(task);
+    };
 
     const deleteBtn = (done) => {
         if (done) {
@@ -34,7 +43,7 @@ export function Task(props) {
                         type="button"
                         className="btn btn-danger"
                         value="Delete"
-                        onClick={() => deleteTask(taskId)}
+                        onClick={() => deleteTask(task)}
                     />
                 </td>
             );
@@ -47,22 +56,22 @@ export function Task(props) {
             <td>
                 <input
                     type="checkbox"
-                    value={done}
-                    onClick={() => setDone(!done)}
+                    checked={task.done}
+                    onChange={() => setDone(!task.done)}
                 ></input>
             </td>
             <td>
-                <p>{name}</p>
+                <p>{task.name}</p>
             </td>
             <td style={{ whiteSpace: "pre" }}>
-                <p>{description}</p>
+                <p>{task.description}</p>
             </td>
             <td>
-                {date === ""
+                {task.date === ""
                     ? ""
-                    : new Date(Date.parse(date)).toLocaleDateString()}
+                    : new Date(Date.parse(task.date)).toLocaleDateString()}
             </td>
-            {deleteBtn(done)}
+            {deleteBtn(task.done)}
         </tr>
     );
 }

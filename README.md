@@ -1,3 +1,3 @@
 # Todo list
 
-React intro
+React and firebase intro

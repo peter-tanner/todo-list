@@ -1,5 +1,6 @@
 import React, { useReducer, useState } from "react";
-import RESET_ACTION from "./RESET_ACTION";
+import { RESET_ACTION } from "./action";
+import { dbWriteTask, newTaskId } from "./firebase";
 
 export function AddTask(props) {
     const [showForm, setShowForm] = useState(false);
@@ -23,12 +24,20 @@ export function AddTask(props) {
 function AddTaskForm(props) {
     const { addTask, show, toggleForm } = props;
 
-    const INITIAL_STATE = { name: "", description: "", date: "" };
+    const INITIAL_STATE = {
+        done: false,
+        name: "",
+        description: "",
+        date: "",
+        taskId: -1,
+    };
     const reducer = (state, event) => {
-        if (event.type === RESET_ACTION.type) {
-            return INITIAL_STATE;
-        } else {
-            return { ...state, [event.target.name]: event.target.value };
+        switch (event.type) {
+            case RESET_ACTION.type:
+                return INITIAL_STATE;
+            default:
+                // Form
+                return { ...state, [event.target.name]: event.target.value };
         }
     };
     const [task, setTask] = useReducer(reducer, INITIAL_STATE);
@@ -38,8 +47,9 @@ function AddTaskForm(props) {
     }
 
     const handleSubmit = (event) => {
-        console.log(task);
+        task.taskId = newTaskId();
         addTask(task);
+        dbWriteTask(task);
         setTask(RESET_ACTION);
         event.preventDefault();
     };

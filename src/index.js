@@ -1,31 +1,63 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ReactDom from "react-dom";
 import AddTask from "./addtask";
+import { dbDeleteTask, dbGetTasks } from "./firebase";
 import { Task, TaskList } from "./tasklist";
 
 // Example task
 // { name: "example task", description: "Amogus sus" };
 
 function Root() {
-    const [taskNumber, setTaskNumber] = useState(0);
     const [tasks, setTasks] = useState([]);
 
-    const addNewTask = (props) => {
-        setTasks((tasks) => [
-            ...tasks,
-            <Task
-                {...props}
-                key={taskNumber}
-                taskId={taskNumber}
-                deleteTask={deleteTask}
-            />,
-        ]);
-        setTaskNumber((taskNumber) => taskNumber + 1);
+    const addTask = useCallback(
+        (props) => {
+            setTasks((tasks) => [
+                ...tasks,
+                <Task
+                    task={props}
+                    key={props.taskId}
+                    deleteTask={deleteTask}
+                />,
+            ]);
+        },
+        [setTasks]
+    );
+
+    const deleteTask = (task) => {
+        dbDeleteTask(task);
+        setTasks((tasks) =>
+            tasks.filter(
+                (otherTask) => otherTask.props.task.taskId !== task.taskId
+            )
+        );
     };
 
-    const deleteTask = (id) => {
-        setTasks((tasks) => tasks.filter((task) => task.props.taskId !== id));
-    };
+    // Run on startup - load tasks from firebase db.
+    useEffect(() => {
+        async function initializeTasks() {
+            let snapshot;
+            try {
+                snapshot = await dbGetTasks();
+            } catch (e) {
+                console.error(e);
+            }
+
+            let tasks = {};
+            if (snapshot.exists()) {
+                tasks = snapshot.val();
+            }
+
+            if (tasks) {
+                // eslint-disable-next-line
+                for (const [_, value] of Object.entries(tasks)) {
+                    addTask(value);
+                }
+            }
+        }
+
+        initializeTasks();
+    }, [addTask]);
 
     return (
         <div className="container mt-3">
@@ -33,7 +65,7 @@ function Root() {
                 <h1>Task list</h1>
             </div>
             <section>
-                <AddTask addTask={addNewTask} />
+                <AddTask addTask={addTask} />
                 <h1>Tasks</h1>
                 <TaskList tasks={tasks} />
             </section>
